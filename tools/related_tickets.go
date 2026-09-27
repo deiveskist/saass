@@ -78,11 +78,12 @@ func handleSearchRelatedTickets(ctx context.Context, req mcp.CallToolRequest) (*
 		}
 
 		var resolutionSummary *string
-		// Sinaliza resolvido sem custar uma chamada extra por ticket aqui;
-		// o agente pode chamar get_ticket nesse ID se quiser o resumo real.
+		// Só busca o comentário de fechamento pra tickets já resolvidos —
+		// evita gastar chamada em tickets abertos, que não têm resolução ainda.
 		if r.Status == "solved" || r.Status == "closed" {
-			s := "resolved — chame get_ticket para ver os comentários de fechamento"
-			resolutionSummary = &s
+			if body, err := fetchLastComment(ctx, env, ticketID); err == nil {
+				resolutionSummary = &body
+			}
 		}
 
 		results = append(results, RelatedTicket{

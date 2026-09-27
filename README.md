@@ -47,22 +47,23 @@ invocá-lo, como subprocesso, sem precisar expor porta HTTP no v1.
 - ✅ Schema de cada tool bate exatamente com `mcp-tools-schema.md`
 - ✅ Registro das tools no servidor, parsing de parâmetros, serialização JSON
 - ✅ Erros de integração retornam `{ "error": "..." }` em vez de derrubar o processo
-- ✅ `get_ticket` — chamada real ao Zendesk (ticket + comentários, 2 requests)
-- ✅ `search_related_tickets` — busca real via Zendesk Search API (full-text,
-  sem ranking semântico; suficiente pro v1)
-- ✅ `get_recent_deploys` — lista commits reais via GitHub Commits API
+- ✅ `get_ticket` — ticket + comentários com nome de autor resolvido (side-loading `include=users`, com cache e fallback por chamada individual)
+- ✅ `search_related_tickets` — busca full-text via Zendesk Search API, com resumo de resolução real (último comentário do ticket, truncado a 300 chars)
+- ✅ `get_recent_deploys` — commits reais via GitHub, com `pr_number` (via "pulls associated with commit") e `files_changed` para os 15 commits mais recentes da janela
 - ✅ `search_logs` — busca real via Datadog Logs Search API v2
-- ⏳ Nenhuma chamada real foi testada contra credenciais de verdade ainda —
-  só compila e passa no `go vet`. Teste com um ticket real antes de confiar
-  no resultado.
-- ⏳ `get_recent_deploys` não traz `pr_number` nem `files_changed` (custaria
-  uma chamada extra por commit) — deixado como TODO no código
-- ⏳ `search_related_tickets` não resolve o resumo de resolução automaticamente
-  — sinaliza que está resolvido e deixa o agente chamar `get_ticket` se quiser
-  os comentários de fechamento
-- ⏳ Se a organização usa Jira em vez de Zendesk, ou Sentry em vez de Datadog,
-  os arquivos `ticket.go`/`related_tickets.go` e `logs.go` são os únicos que
-  precisam mudar — o resto (main.go, schemas) não depende da escolha
+- ✅ **As 5 tools do MVP v1 estão funcionalmente completas** — nenhum TODO de integração pendente
+
+**Único gap real: nada foi testado contra credenciais de verdade ainda.**
+Antes de confiar no resultado:
+1. Gerar as credenciais reais (Zendesk API token, GitHub PAT, Datadog API+APP key)
+2. Rodar o servidor e chamar cada tool manualmente contra 1 ticket conhecido
+3. Comparar o `summarize_investigation` gerado pelo agente com a conclusão
+   que um engenheiro chegou de fato — esse é o gate antes de vender
+   (critério: bater em 60-70% dos casos, ver `/areas/supportability-agent-saas.md`)
+
+**Se a organização usa outra stack:** Jira em vez de Zendesk, ou Sentry em
+vez de Datadog — só `ticket.go`/`related_tickets.go` e `logs.go` precisam
+mudar; `main.go` e os schemas continuam iguais.
 
 ## Próximo passo depois de plugar as APIs reais
 

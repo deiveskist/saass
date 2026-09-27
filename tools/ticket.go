@@ -226,9 +226,26 @@ func fetchTicketFromZendesk(ctx context.Context, ticketID string) (*Ticket, erro
 	}, nil
 }
 
-// zendeskGet centraliza GET autenticado + decode JSON, usado por essa
-// tool e por search_related_tickets. Genérico em T pra não repetir o
-// boilerplate de request/response em cada endpoint do Zendesk.
+// fetchLastComment busca o comentário mais recente de um ticket — usado
+// como resumo de resolução em search_related_tickets. Fica aqui porque
+// reaproveita o mesmo zendeskCommentsResponse/zendeskGet já usados por
+// get_ticket, em vez de duplicar a chamada noutro arquivo.
+func fetchLastComment(ctx context.Context, env *zendeskEnv, ticketID string) (string, error) {
+	resp, err := zendeskGet[zendeskCommentsResponse](ctx, env,
+		fmt.Sprintf("https://%s.zendesk.com/api/v2/tickets/%s/comments.json?sort_order=desc", env.Subdomain, ticketID))
+	if err != nil {
+		return "", err
+	}
+	if len(resp.Comments) == 0 {
+		return "", fmt.Errorf("no comments found")
+	}
+	body := resp.Comments[0].Body
+	const maxLen = 300
+	if len(body) > maxLen {
+		body = body[:maxLen] + "…"
+	}
+	return body, nil
+}
 func zendeskGet[T any](ctx context.Context, env *zendeskEnv, url string) (*T, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

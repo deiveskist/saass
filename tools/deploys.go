@@ -92,20 +92,32 @@ func handleGetRecentDeploys(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
+	// Limita quantos commits recebem a chamada detalhada (files_changed +
+	// PR associado). Numa investigação real a janela de tempo já é curta
+	// (ex.: últimas 24-48h), então isso raramente corta resultado relevante
+	// — só protege contra um "since" largo demais estourar o rate limit.
+	const maxDetailed = 15
+
 	deploys := make([]Deploy, 0, len(commits))
-	for _, c := range commits {
-		deploys = append(deploys, Deploy{
-			CommitSHA: c.SHA,
-			// PRNumber e FilesChanged ficam vazios no v1: pegar isso exigiria
-			// uma chamada extra por commit (/commits/{sha} ou /search/issues)
-			// — custo alto de rate-limit pra um dado "bom de ter", não essencial.
-			// TODO: preencher quando o volume de investigações justificar o custo.
-			PRNumber:     0,
+	for i, c := range commits {
+		deploy := Deploy{
+			CommitSHA:    c.SHA,
 			Title:        c.Commit.Message,
 			Author:       c.Commit.Author.Name,
 			MergedAt:     c.Commit.Author.Date,
 			FilesChanged: []string{},
-		})
+		}
+
+		if i < maxDetailed {
+			if files, err := fetchCommitFiles(ctx, token, repository, c.SHA); err == nil {
+				deploy.FilesChanged = files
+			}
+			if prNumber, err := fetchAssociatedPR(ctx, token, repository, c.SHA); err == nil {
+				deploy.PRNumber = prNumber
+			}
+		}
+
+		deploys = append(deploys, deploy)
 	}
 
 	payload, err := json.Marshal(DeploysResult{Deploys: deploys})
@@ -113,4 +125,62 @@ func handleGetRecentDeploys(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 	return mcp.NewToolResultText(string(payload)), nil
+}
+
+// fetchCommitFiles busca os arquivos alterados num commit específico.
+func fetchCommitFiles(ctx context.Context, token, repository, sha string) ([]string, error) {
+	type commitDetail struct {
+		Files []struct {
+			Filename string `json:"filename"`
+		} `json:"files"`
+	}
+	var detail commitDetail
+	if err := githubGet(ctx, token, fmt.Sprintf("https://api.github.com/repos/%s/commits/%s", repository, sha), &detail); err != nil {
+		return nil, err
+	}
+	files := make([]string, 0, len(detail.Files))
+	for _, f := range detail.Files {
+		files = append(files, f.Filename)
+	}
+	return files, nil
+}
+
+// fetchAssociatedPR usa o endpoint de "pulls associated with a commit" pra
+// achar o número da PR que trouxe esse commit (0 se for commit direto na
+// branch, sem PR — comum em hotfix ou squash manual).
+func fetchAssociatedPR(ctx context.Context, token, repository, sha string) (int, error) {
+	type pr struct {
+		Number int `json:"number"`
+	}
+	var prs []pr
+	if err := githubGet(ctx, token, fmt.Sprintf("https://api.github.com/repos/%s/commits/%s/pulls", repository, sha), &prs); err != nil {
+		return 0, err
+	}
+	if len(prs) == 0 {
+		return 0, nil
+	}
+	return prs[0].Number, nil
+}
+
+// githubGet centraliza GET autenticado + decode JSON contra a GitHub API,
+// no mesmo espírito do zendeskGet em ticket.go.
+func githubGet(ctx context.Context, token, url string, out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("github returned %d: %s", resp.StatusCode, string(body))
+	}
+	return json.NewDecoder(resp.Body).Decode(out)
 }
