@@ -11,6 +11,15 @@ import (
 // tools em sequência, uma API lenta não pode travar tudo.
 var httpClient = &http.Client{Timeout: 15 * time.Second}
 
+// Base URLs como vars (não const) de propósito: os testes substituem
+// esses valores por endereços de httptest.Server, evitando qualquer
+// chamada de rede real durante `go test`.
+var (
+	zendeskAPIBase = "https://%s.zendesk.com/api/v2" // %s = subdomain
+	githubAPIBase  = "https://api.github.com"
+	datadogAPIBase = "https://api.datadoghq.com"
+)
+
 // zendeskBasicAuth monta o header Authorization no formato que a API do
 // Zendesk espera: Basic base64("email/token:api_token").
 func zendeskBasicAuth(email, apiToken string) string {

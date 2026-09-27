@@ -58,7 +58,7 @@ func handleSearchRelatedTickets(ctx context.Context, req mcp.CallToolRequest) (*
 	// que houver volume real de tickets fechados pra indexar.
 	searchQuery := fmt.Sprintf("type:ticket %s", query)
 	endpoint := fmt.Sprintf(
-		"https://%s.zendesk.com/api/v2/search.json?query=%s&sort_by=updated_at&sort_order=desc",
+		zendeskAPIBase+"/search.json?query=%s&sort_by=updated_at&sort_order=desc",
 		env.Subdomain, url.QueryEscape(searchQuery),
 	)
 

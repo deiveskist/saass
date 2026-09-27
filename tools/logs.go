@@ -101,7 +101,7 @@ func handleSearchLogs(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		"https://api.datadoghq.com/api/v2/logs/events/search", bytes.NewReader(bodyBytes))
+		datadogAPIBase+"/api/v2/logs/events/search", bytes.NewReader(bodyBytes))
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}

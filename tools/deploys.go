@@ -62,7 +62,7 @@ func handleGetRecentDeploys(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError("GITHUB_TOKEN not set"), nil
 	}
 
-	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/commits?since=%s", repository, since)
+	endpoint := fmt.Sprintf(githubAPIBase+"/repos/%s/commits?since=%s", repository, since)
 	if until != "" {
 		endpoint += "&until=" + until
 	}
@@ -135,7 +135,7 @@ func fetchCommitFiles(ctx context.Context, token, repository, sha string) ([]str
 		} `json:"files"`
 	}
 	var detail commitDetail
-	if err := githubGet(ctx, token, fmt.Sprintf("https://api.github.com/repos/%s/commits/%s", repository, sha), &detail); err != nil {
+	if err := githubGet(ctx, token, fmt.Sprintf(githubAPIBase+"/repos/%s/commits/%s", repository, sha), &detail); err != nil {
 		return nil, err
 	}
 	files := make([]string, 0, len(detail.Files))
@@ -153,7 +153,7 @@ func fetchAssociatedPR(ctx context.Context, token, repository, sha string) (int,
 		Number int `json:"number"`
 	}
 	var prs []pr
-	if err := githubGet(ctx, token, fmt.Sprintf("https://api.github.com/repos/%s/commits/%s/pulls", repository, sha), &prs); err != nil {
+	if err := githubGet(ctx, token, fmt.Sprintf(githubAPIBase+"/repos/%s/commits/%s/pulls", repository, sha), &prs); err != nil {
 		return 0, err
 	}
 	if len(prs) == 0 {

@@ -139,7 +139,7 @@ func resolveAuthorName(ctx context.Context, env *zendeskEnv, authorID int64) str
 		} `json:"user"`
 	}
 	resp, err := zendeskGet[zendeskUserResponse](ctx, env,
-		fmt.Sprintf("https://%s.zendesk.com/api/v2/users/%d.json", env.Subdomain, authorID))
+		fmt.Sprintf(zendeskAPIBase+"/users/%d.json", env.Subdomain, authorID))
 	if err != nil {
 		// Não trava a investigação por causa de um nome — cai pro ID cru.
 		return fmt.Sprintf("user:%d", authorID)
@@ -181,7 +181,7 @@ func fetchTicketFromZendesk(ctx context.Context, ticketID string) (*Ticket, erro
 		return nil, err
 	}
 
-	base := fmt.Sprintf("https://%s.zendesk.com/api/v2", env.Subdomain)
+	base := fmt.Sprintf(zendeskAPIBase, env.Subdomain)
 
 	ticketResp, err := zendeskGet[zendeskTicketResponse](ctx, env, fmt.Sprintf("%s/tickets/%s.json", base, ticketID))
 	if err != nil {
@@ -232,7 +232,7 @@ func fetchTicketFromZendesk(ctx context.Context, ticketID string) (*Ticket, erro
 // get_ticket, em vez de duplicar a chamada noutro arquivo.
 func fetchLastComment(ctx context.Context, env *zendeskEnv, ticketID string) (string, error) {
 	resp, err := zendeskGet[zendeskCommentsResponse](ctx, env,
-		fmt.Sprintf("https://%s.zendesk.com/api/v2/tickets/%s/comments.json?sort_order=desc", env.Subdomain, ticketID))
+		fmt.Sprintf(zendeskAPIBase+"/tickets/%s/comments.json?sort_order=desc", env.Subdomain, ticketID))
 	if err != nil {
 		return "", err
 	}

@@ -54,7 +54,10 @@ invocá-lo, como subprocesso, sem precisar expor porta HTTP no v1.
 - ✅ **As 5 tools do MVP v1 estão funcionalmente completas** — nenhum TODO de integração pendente
 
 **Único gap real: nada foi testado contra credenciais de verdade ainda.**
-Antes de confiar no resultado:
+Os testes em `tools/*_test.go` cobrem toda a lógica de parsing, erro e
+enriquecimento contra servidores HTTP mockados (`go test ./...`, 8 testes,
+sem nenhuma chamada de rede real) — isso valida o código, mas não substitui
+testar contra as APIs reais. Antes de confiar no resultado com dados reais:
 1. Gerar as credenciais reais (Zendesk API token, GitHub PAT, Datadog API+APP key)
 2. Rodar o servidor e chamar cada tool manualmente contra 1 ticket conhecido
 3. Comparar o `summarize_investigation` gerado pelo agente com a conclusão
