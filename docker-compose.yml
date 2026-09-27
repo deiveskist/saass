@@ -16,5 +16,32 @@ services:
       timeout: 5s
       retries: 5
 
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    ports:
+      - "9091:9090" # 9090 costuma estar ocupada localmente; mapeado pra 9091
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    # host.docker.internal só existe por padrão no Docker Desktop
+    # (Mac/Windows); no Linux, extra_hosts abaixo resolve o mesmo nome
+    # pro gateway do host, alcançando o servidor Go que roda fora do Docker.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    ports:
+      - "3001:3000" # 3000 é a porta do Next.js — Grafana fica em 3001
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:

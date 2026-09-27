@@ -53,6 +53,16 @@ publicamente):
 alguma tool está lenta ou falhando mais que as outras, sem precisar ficar
 lendo log.
 
+**Ver isso num dashboard, sem configurar nada:** `docker compose up -d`
+também sobe Prometheus (fazendo scrape de `:8080/metrics` a cada 10s) e
+Grafana com um dashboard pré-carregado (taxa de chamadas, taxa de erro e
+p95 de latência, todos por tool). Abra http://localhost:3001 — login
+anônimo habilitado só pra isso ser zero-fricção em dev local; **não deixe
+assim em produção** (`GF_AUTH_ANONYMOUS_ENABLED` no `docker-compose.yml`).
+Só funciona com o servidor Go já rodando em `--http :8080` no host (ver
+`scripts/dev-local.sh`) — o Prometheus dentro do container alcança o host
+via `host.docker.internal` (`extra_hosts` cuida disso no Linux também).
+
 ### Rodando tudo localmente, sem nenhuma credencial real
 
 Pra validar o sistema inteiro (Go MCP server + interface web) sem conta

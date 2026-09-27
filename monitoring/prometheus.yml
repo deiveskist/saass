@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 10s
+
+scrape_configs:
+  - job_name: supportability-mcp
+    static_configs:
+      # O servidor Go roda no host (via scripts/dev-local.sh), não em
+      # container — host.docker.internal é como o container do Prometheus
+      # alcança processos rodando fora do Docker. No Linux isso só
+      # funciona com o extra_hosts declarado no docker-compose.yml.
+      - targets: ["host.docker.internal:8080"]
