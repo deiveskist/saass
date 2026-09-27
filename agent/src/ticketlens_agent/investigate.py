@@ -1,5 +1,5 @@
 """Monta o agente (create_react_agent do LangGraph) com as 5 tools do
-supportability-mcp já convertidas, e roda uma investigação completa de
+ticketlens já convertidas, e roda uma investigação completa de
 ticket — do "recebi o ticket X" até o `summarize_investigation` final.
 """
 
@@ -35,7 +35,7 @@ async def _get_server_command() -> tuple[str, list[str]]:
     server_command = os.environ.get("MCP_SERVER_BINARY")
     if not server_command:
         raise RuntimeError(
-            "MCP_SERVER_BINARY not set — point it at the compiled supportability-mcp binary"
+            "MCP_SERVER_BINARY not set — point it at the compiled ticketlens binary"
         )
     return server_command, []
 

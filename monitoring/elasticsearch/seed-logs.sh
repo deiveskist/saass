@@ -10,7 +10,7 @@
 set -euo pipefail
 
 ES_URL=${ELASTICSEARCH_URL:-http://localhost:9200}
-INDEX="logs-supportability-demo"
+INDEX="logs-ticketlens-demo"
 
 echo "==> Aguardando Elasticsearch ficar pronto em $ES_URL..."
 until curl -sf "$ES_URL/_cluster/health" > /dev/null; do

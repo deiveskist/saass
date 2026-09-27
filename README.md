@@ -1,15 +1,18 @@
 # TicketLens
 
-> **Sobre o nome:** o produto se chama **TicketLens** — o repositório e o
-> binário ainda se chamam `supportability-mcp` por enquanto (renomear
-> isso é um passo separado, não feito ainda). "Lens" (lente) descreve bem
-> o que o produto faz: aproxima e junta o contexto ao redor de **um
-> ticket** — comentários, tickets parecidos, deploys recentes, logs — pra
-> dar ao engenheiro de suporte uma visão nítida antes de investigar na
-> mão. O nome anterior vinha de um projeto interno homônimo na SAP
-> Concur (uma interface de viagens, sem relação nenhuma com isto) — o
-> nome mudou justamente pra não ter essa confusão, já que este projeto é
-> inteiramente independente da SAP/Concur.
+> **Sobre o nome:** o produto se chama **TicketLens**. O binário Go, o
+> módulo (`github.com/deives/ticketlens`), o pacote Python do agente
+> (`ticketlens-agent`) e as métricas Prometheus já usam esse nome — só o
+> nome do repositório no GitHub ainda não foi trocado (isso é feito nas
+> configurações do repo, não por código; renomear lá não quebra nada,
+> o GitHub redireciona a URL antiga automaticamente). "Lens" (lente)
+> descreve bem o que o produto faz: aproxima e junta o contexto ao redor
+> de **um ticket** — comentários, tickets parecidos, deploys recentes,
+> logs — pra dar ao engenheiro de suporte uma visão nítida antes de
+> investigar na mão. O nome anterior vinha de um projeto interno homônimo
+> na SAP Concur (uma interface de viagens, sem relação nenhuma com isto)
+> — o nome mudou justamente pra não ter essa confusão, já que este
+> projeto é inteiramente independente da SAP/Concur.
 
 Servidor MCP em Go com as 5 tools do MVP v1 do TicketLens,
 com integrações reais (Zendesk, GitHub, Datadog) e testes automatizados.
@@ -19,7 +22,7 @@ Falta só validar contra credenciais e tickets reais (ver seção de testes).
 
 ```bash
 go mod tidy   # baixa as dependências (precisa de internet normal)
-go build -o supportability-mcp .
+go build -o ticketlens .
 
 ZENDESK_SUBDOMAIN=suaempresa \
 ZENDESK_EMAIL=voce@empresa.com \
@@ -27,7 +30,7 @@ ZENDESK_API_TOKEN=xxx \
 GITHUB_TOKEN=ghp_xxx \
 DD_API_KEY=xxx \
 DD_APP_KEY=xxx \
-./supportability-mcp
+./ticketlens
 ```
 
 | Variável | Usada por |
@@ -45,13 +48,13 @@ precisar trocar código:
 
 ```bash
 # Datadog (default)
-DD_API_KEY=xxx DD_APP_KEY=xxx ./supportability-mcp
+DD_API_KEY=xxx DD_APP_KEY=xxx ./ticketlens
 
 # Elasticsearch
 LOGS_PROVIDER=elasticsearch \
 ELASTICSEARCH_URL=https://es.suaempresa.com:9200 \
 ELASTICSEARCH_API_KEY=xxx \
-./supportability-mcp
+./ticketlens
 ```
 
 O Elasticsearch é lido no formato ECS (Elastic Common Schema): `@timestamp`,
@@ -63,7 +66,7 @@ vai invocá-lo, como subprocesso. Também há um **modo REST** pro dashboard
 web (`web/`), que não fala o protocolo MCP:
 
 ```bash
-INTERNAL_API_KEY=um-segredo-seu ./supportability-mcp --http :8080
+INTERNAL_API_KEY=um-segredo-seu ./ticketlens --http :8080
 ```
 
 Isso expõe as mesmas 5 tools em `POST /api/tools/<nome>` (JSON in, JSON
@@ -77,9 +80,9 @@ O modo `--http` expõe `GET /metrics` (sem auth — é assim que um Prometheus
 real faz scrape; coloque atrás de firewall/rede privada se for exposto
 publicamente):
 
-- `supportability_mcp_tool_calls_total{tool, status}` — contador, `status`
+- `ticketlens_tool_calls_total{tool, status}` — contador, `status`
   é `ok`, `tool_error` (erro de integração upstream) ou `internal_error`
-- `supportability_mcp_tool_call_duration_seconds{tool}` — histograma de
+- `ticketlens_tool_call_duration_seconds{tool}` — histograma de
   latência por tool
 
 Útil já na fase de validação contra credenciais reais: mostra na hora se
@@ -135,13 +138,13 @@ vez de mockar.** O `docker compose up -d` já sobe um Elasticsearch real
 
 LOGS_PROVIDER=elasticsearch \
 ELASTICSEARCH_URL=http://localhost:9200 \
-ELASTICSEARCH_INDEX=logs-supportability-demo \
-... /tmp/supportability-mcp --http :8080
+ELASTICSEARCH_INDEX=logs-ticketlens-demo \
+... /tmp/ticketlens --http :8080
 ```
 
 O datasource Elasticsearch já vem provisionado no Grafana (junto com o
 Prometheus) — abra http://localhost:3001, aba Explore, escolha
-"Elasticsearch" e busque em `logs-supportability-demo`.
+"Elasticsearch" e busque em `logs-ticketlens-demo`.
 
 ## Estrutura
 
@@ -205,7 +208,7 @@ Antes de confiar no resultado com dados reais:
 2. Rodar `TestManual_*` (acima) contra 1 ticket conhecido de cada vez
 3. Comparar o `summarize_investigation` gerado pelo agente com a conclusão
    que um engenheiro chegou de fato — esse é o gate antes de vender
-   (critério: bater em 60-70% dos casos, ver `/areas/supportability-agent-saas.md`)
+   (critério: bater em 60-70% dos casos, ver `validation/README.md`)
 
 **Se a organização usa outra stack:** Jira em vez de Zendesk, ou Sentry em
 vez de Datadog — só `ticket.go`/`related_tickets.go` e `logs.go` precisam

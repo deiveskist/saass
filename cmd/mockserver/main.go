@@ -11,7 +11,7 @@
 //	ZENDESK_API_BASE=http://localhost:9090/zendesk/%s \
 //	GITHUB_API_BASE=http://localhost:9090/github \
 //	DATADOG_API_BASE=http://localhost:9090/datadog \
-//	./supportability-mcp --http :8080
+//	./ticketlens --http :8080
 //
 // Ver web/README.md ou README.md (raiz) para o passo a passo completo.
 package main

@@ -1,6 +1,6 @@
 {
-  "title": "Supportability MCP",
-  "uid": "supportability-mcp",
+  "title": "TicketLens",
+  "uid": "ticketlens",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "10s",
@@ -13,7 +13,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
         {
-          "expr": "sum by (tool) (rate(supportability_mcp_tool_calls_total[1m]))",
+          "expr": "sum by (tool) (rate(ticketlens_tool_calls_total[1m]))",
           "legendFormat": "{{tool}}"
         }
       ]
@@ -26,7 +26,7 @@
       "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
       "targets": [
         {
-          "expr": "sum by (tool) (rate(supportability_mcp_tool_calls_total{status!=\"ok\"}[5m])) / sum by (tool) (rate(supportability_mcp_tool_calls_total[5m]))",
+          "expr": "sum by (tool) (rate(ticketlens_tool_calls_total{status!=\"ok\"}[5m])) / sum by (tool) (rate(ticketlens_tool_calls_total[5m]))",
           "legendFormat": "{{tool}}"
         }
       ]
@@ -39,7 +39,7 @@
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (tool, le) (rate(supportability_mcp_tool_call_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (tool, le) (rate(ticketlens_tool_call_duration_seconds_bucket[5m])))",
           "legendFormat": "{{tool}}"
         }
       ]

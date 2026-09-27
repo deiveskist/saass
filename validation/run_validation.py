@@ -1,7 +1,7 @@
 """Roda os cenários de validation/scenarios contra o sistema real.
 
 Para cada cenário, sobe `mockserver -scenario <arquivo>` (dados do
-cenário), aponta o binário do supportability-mcp pra ele e:
+cenário), aponta o binário do ticketlens pra ele e:
 
   --check   Sem LLM e sem custo. Chama as 4 tools de dados exatamente como
             o agente chamaria e confirma que toda `required_evidence` do
@@ -13,9 +13,9 @@ cenário), aponta o binário do supportability-mcp pra ele e:
             scoring.py e imprime o relatório contra o gate de 60%.
 
 Uso (a partir da raiz do repo):
-    go build -o /tmp/supportability-mcp . && go build -o /tmp/mockserver ./cmd/mockserver
+    go build -o /tmp/ticketlens . && go build -o /tmp/ticketlens-mockserver ./cmd/mockserver
     pip install -e agent
-    MCP_SERVER_BINARY=/tmp/supportability-mcp MOCKSERVER_BINARY=/tmp/mockserver \
+    MCP_SERVER_BINARY=/tmp/ticketlens MOCKSERVER_BINARY=/tmp/ticketlens-mockserver \
         python validation/run_validation.py --check
 """
 
@@ -33,7 +33,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from supportability_agent.mcp_wrapper import RunTool, apply
+from ticketlens_agent.mcp_wrapper import RunTool, apply
 
 sys.path.insert(0, str(Path(__file__).parent))
 from scoring import score  # noqa: E402
@@ -76,7 +76,7 @@ class MockServer:
     def __enter__(self) -> "MockServer":
         binary = os.environ.get("MOCKSERVER_BINARY")
         if not binary:
-            raise RuntimeError("MOCKSERVER_BINARY not set (go build -o /tmp/mockserver ./cmd/mockserver)")
+            raise RuntimeError("MOCKSERVER_BINARY not set (go build -o /tmp/ticketlens-mockserver ./cmd/mockserver)")
         self.proc = subprocess.Popen(
             [binary, "-addr", f":{MOCK_PORT}", "-scenario", str(self.scenario_path)],
             stdout=subprocess.DEVNULL,
@@ -101,7 +101,7 @@ class MockServer:
 def _server() -> str:
     binary = os.environ.get("MCP_SERVER_BINARY")
     if not binary:
-        raise RuntimeError("MCP_SERVER_BINARY not set (go build -o /tmp/supportability-mcp .)")
+        raise RuntimeError("MCP_SERVER_BINARY not set (go build -o /tmp/ticketlens .)")
     return binary
 
 
@@ -146,7 +146,7 @@ def extract_summary(messages: list[Any]) -> dict[str, Any] | None:
 
 
 async def run_agent_scenario(scenario: dict[str, Any]) -> dict[str, Any]:
-    from supportability_agent.investigate import INVESTIGATION_PROMPT, build_agent
+    from ticketlens_agent.investigate import INVESTIGATION_PROMPT, build_agent
 
     agent = await build_agent()
     prompt = INVESTIGATION_PROMPT.format(ticket_id=scenario["ticket"]["id"])

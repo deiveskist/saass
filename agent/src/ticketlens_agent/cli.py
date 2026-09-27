@@ -1,4 +1,4 @@
-"""Entry point: `python -m supportability_agent.cli <ticket_id>`."""
+"""Entry point: `python -m ticketlens_agent.cli <ticket_id>`."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ def main() -> None:
     load_dotenv()
 
     parser = argparse.ArgumentParser(
-        description="Investigate a support ticket using the supportability-mcp tools."
+        description="Investigate a support ticket using the ticketlens tools."
     )
     parser.add_argument("ticket_id", help="External ticket ID (e.g. Zendesk ID)")
     args = parser.parse_args()

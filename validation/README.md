@@ -47,18 +47,18 @@ natural, mantendo as palavras-chave como checagem barata e determinística.
 A partir da raiz do repo:
 
 ```bash
-go build -o /tmp/supportability-mcp . && go build -o /tmp/mockserver ./cmd/mockserver
+go build -o /tmp/ticketlens . && go build -o /tmp/ticketlens-mockserver ./cmd/mockserver
 cd agent && python3 -m venv .venv && .venv/bin/pip install -e ".[test]" && cd ..
 
 # 1. Sem LLM, sem custo: consistência dos cenários e do scoring
 agent/.venv/bin/pytest validation/tests
 
 # 2. Sem LLM: cada cenário é resolvível pelas tools reais?
-MCP_SERVER_BINARY=/tmp/supportability-mcp MOCKSERVER_BINARY=/tmp/mockserver \
+MCP_SERVER_BINARY=/tmp/ticketlens MOCKSERVER_BINARY=/tmp/ticketlens-mockserver \
   agent/.venv/bin/python validation/run_validation.py --check
 
 # 3. O teste de verdade: roda o agente em todos os cenários (precisa ANTHROPIC_API_KEY)
-ANTHROPIC_API_KEY=... MCP_SERVER_BINARY=/tmp/supportability-mcp MOCKSERVER_BINARY=/tmp/mockserver \
+ANTHROPIC_API_KEY=... MCP_SERVER_BINARY=/tmp/ticketlens MOCKSERVER_BINARY=/tmp/ticketlens-mockserver \
   agent/.venv/bin/python validation/run_validation.py
 ```
 

@@ -1,7 +1,7 @@
 [project]
-name = "supportability-agent"
+name = "ticketlens-agent"
 version = "0.1.0"
-description = "LangGraph agent that orchestrates the supportability-mcp tools to investigate a support ticket end to end."
+description = "LangGraph agent that orchestrates the ticketlens tools to investigate a support ticket end to end."
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.2.0",
@@ -16,7 +16,7 @@ dependencies = [
 test = ["pytest>=8.0.0", "pytest-asyncio>=0.24.0"]
 
 [project.scripts]
-supportability-agent = "supportability_agent.cli:main"
+ticketlens-agent = "ticketlens_agent.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

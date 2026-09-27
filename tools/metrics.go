@@ -6,12 +6,12 @@ import (
 )
 
 // Métricas expostas em /metrics (modo --http). Nomeadas com o prefixo
-// supportability_mcp_ pra não colidir com métricas de outro serviço no
+// ticketlens_ pra não colidir com métricas de outro serviço no
 // mesmo scrape target.
 var (
 	toolCallsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "supportability_mcp_tool_calls_total",
+			Name: "ticketlens_tool_calls_total",
 			Help: "Total de chamadas por tool, com o resultado (ok | tool_error | internal_error).",
 		},
 		[]string{"tool", "status"},
@@ -19,7 +19,7 @@ var (
 
 	toolCallDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name: "supportability_mcp_tool_call_duration_seconds",
+			Name: "ticketlens_tool_call_duration_seconds",
 			Help: "Duração de cada chamada de tool, do início ao fim do handler.",
 			// Buckets pensados pra chamadas de rede (Zendesk/GitHub/Datadog):
 			// da casa de 10ms (cache/erro rápido) até timeouts (15s, ver

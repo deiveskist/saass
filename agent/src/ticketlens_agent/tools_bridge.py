@@ -3,7 +3,7 @@ como o `mcp.NewTool(...)` do lado Go declara) em `StructuredTool` do
 LangChain, prontas pro `create_react_agent` do LangGraph.
 
 Escrito do zero pra este projeto (não faz parte do esxr/langgraph-mcp) —
-como as 5 tools do supportability-mcp só usam tipos simples (string,
+como as 5 tools do ticketlens só usam tipos simples (string,
 number, array de string), um conversor minimalista aqui evita puxar uma
 dependência inteira (`langchain-mcp-adapters`) só por causa dessa etapa.
 """

@@ -7,7 +7,7 @@ roda a operação e fecha — permite adicionar novas operações (além de
 GetTools/RunTool) sem tocar na lógica de abrir/fechar sessão.
 
 Simplificado em relação ao original: aqui só existe *um* servidor MCP
-(o supportability-mcp em Go), então `apply()` não recebe um dicionário de
+(o ticketlens em Go), então `apply()` não recebe um dicionário de
 config de múltiplos servidores — só o comando pra rodar esse único
 binário.
 """
@@ -48,7 +48,7 @@ class GetTools(MCPSessionFunction):
 
 class RunTool(MCPSessionFunction):
     """Invoca uma tool específica com os argumentos dados e devolve o
-    texto retornado (as tools do supportability-mcp sempre devolvem JSON
+    texto retornado (as tools do ticketlens sempre devolvem JSON
     como texto puro — ver mcp-tools-schema.md na raiz do repo)."""
 
     def __init__(self, tool_name: str, arguments: dict[str, Any]):
@@ -69,7 +69,7 @@ async def apply(
     fn: MCPSessionFunction,
     extra_env: dict[str, str] | None = None,
 ) -> Any:
-    """Abre uma sessão stdio nova com o supportability-mcp, roda `fn` e
+    """Abre uma sessão stdio nova com o ticketlens, roda `fn` e
     fecha o processo. Um processo por chamada, de propósito — o servidor
     Go não guarda estado entre tools (ver tools/httpserver.go, que segue o
     mesmo raciocínio pro modo HTTP), então não há custo real em reabrir, e

@@ -13,12 +13,12 @@ MOCK_PORT=9090
 SERVER_PORT=8080
 INTERNAL_API_KEY=${INTERNAL_API_KEY:-dev-local-key}
 
-echo "==> Buildando mockserver e supportability-mcp..."
-go build -o /tmp/supportability-mockserver ./cmd/mockserver
-go build -o /tmp/supportability-mcp .
+echo "==> Buildando mockserver e ticketlens..."
+go build -o /tmp/ticketlens-mockserver ./cmd/mockserver
+go build -o /tmp/ticketlens .
 
 echo "==> Subindo mock server em :$MOCK_PORT"
-/tmp/supportability-mockserver -addr ":$MOCK_PORT" &
+/tmp/ticketlens-mockserver -addr ":$MOCK_PORT" &
 MOCK_PID=$!
 
 cleanup() {
@@ -36,7 +36,7 @@ GITHUB_API_BASE="http://localhost:$MOCK_PORT/github" \
 DATADOG_API_BASE="http://localhost:$MOCK_PORT/datadog" \
 ZENDESK_SUBDOMAIN=acme ZENDESK_EMAIL=dev@local.test ZENDESK_API_TOKEN=dev \
 GITHUB_TOKEN=dev DD_API_KEY=dev DD_APP_KEY=dev \
-/tmp/supportability-mcp --http ":$SERVER_PORT" &
+/tmp/ticketlens --http ":$SERVER_PORT" &
 SERVER_PID=$!
 
 sleep 1

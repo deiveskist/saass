@@ -6,7 +6,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/deives/supportability-mcp/tools"
+	"github.com/deives/ticketlens/tools"
 )
 
 func main() {
@@ -24,7 +24,7 @@ func main() {
 	}
 
 	s := server.NewMCPServer(
-		"supportability-agent",
+		"ticketlens",
 		"0.1.0",
 		server.WithToolCapabilities(true),
 	)

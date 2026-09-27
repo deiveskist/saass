@@ -1,11 +1,11 @@
 """Testa o mcp_wrapper (GetTools/RunTool) contra o binário real do
-supportability-mcp — sem LLM e sem credenciais reais, usando o mesmo
+ticketlens — sem LLM e sem credenciais reais, usando o mesmo
 cmd/mockserver (Go) que o resto do projeto já usa pra validação local.
 
 Pré-requisitos pra rodar:
-    cd .. && go build -o /tmp/supportability-mcp . && go build -o /tmp/mockserver ./cmd/mockserver
-    /tmp/mockserver -addr :9090 &
-    MCP_SERVER_BINARY=/tmp/supportability-mcp pytest
+    cd .. && go build -o /tmp/ticketlens . && go build -o /tmp/ticketlens-mockserver ./cmd/mockserver
+    /tmp/ticketlens-mockserver -addr :9090 &
+    MCP_SERVER_BINARY=/tmp/ticketlens pytest
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import os
 
 import pytest
 
-from supportability_agent.mcp_wrapper import GetTools, RunTool, apply
+from ticketlens_agent.mcp_wrapper import GetTools, RunTool, apply
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("MCP_SERVER_BINARY"),

@@ -1,6 +1,6 @@
-# supportability-agent
+# ticketlens-agent
 
-Agente Python (LangGraph) que orquestra as 5 tools do `supportability-mcp`
+Agente Python (LangGraph) que orquestra as 5 tools do `ticketlens`
 (servidor Go na raiz do repo) pra investigar um ticket de suporte sozinho,
 do início ao fim.
 
@@ -32,11 +32,11 @@ reimplementar o loop de decisão na mão.
 agent/
 ├── pyproject.toml
 ├── .env.example
-├── src/supportability_agent/
+├── src/ticketlens_agent/
 │   ├── mcp_wrapper.py    # Strategy pattern: MCPSessionFunction, GetTools, RunTool, apply()
 │   ├── tools_bridge.py    # converte as tool specs do MCP em StructuredTool do LangChain
 │   ├── investigate.py     # monta o agente (create_react_agent) e roda uma investigação
-│   └── cli.py             # `python -m supportability_agent.cli <ticket_id>`
+│   └── cli.py             # `python -m ticketlens_agent.cli <ticket_id>`
 └── tests/
     └── test_mcp_wrapper.py  # testa contra o binário Go real (com o mock server como backend)
 ```
@@ -49,11 +49,11 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 cp .env.example .env   # ajuste MCP_SERVER_BINARY e a chave do LLM
-python -m supportability_agent.cli 42
+python -m ticketlens_agent.cli 42
 ```
 
 `MCP_SERVER_BINARY` deve apontar pro binário já compilado do Go
-(`go build -o supportability-mcp .` na raiz do repo) — o agente sobe esse
+(`go build -o ticketlens .` na raiz do repo) — o agente sobe esse
 binário como subprocesso via stdio a cada investigação, e repassa as
 credenciais (`ZENDESK_*`, `GITHUB_TOKEN`, `DD_*`/`ELASTICSEARCH_*`) do seu
 próprio ambiente pra ele.
@@ -61,7 +61,7 @@ próprio ambiente pra ele.
 ## Testando sem credenciais reais
 
 Os testes usam o mesmo `cmd/mockserver` (Go) que o resto do projeto já
-tem — sobe o mock, aponta o binário do supportability-mcp pra ele (as
+tem — sobe o mock, aponta o binário do ticketlens pra ele (as
 mesmas env vars `ZENDESK_API_BASE`/`GITHUB_API_BASE`/`DATADOG_API_BASE` de
 `../scripts/dev-local.sh`), e valida que o `GetTools`/`RunTool` do
 wrapper conversam corretamente com o processo Go de verdade — sem
@@ -69,5 +69,5 @@ precisar de LLM nem de credencial nenhuma:
 
 ```bash
 pip install -e ".[test]"
-MCP_SERVER_BINARY=/tmp/supportability-mcp pytest
+MCP_SERVER_BINARY=/tmp/ticketlens pytest
 ```

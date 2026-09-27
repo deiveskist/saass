@@ -1,7 +1,7 @@
 # Next.js SaaS Starter
 
 > **Nota deste projeto:** clonado de [nextjs/saas-starter](https://github.com/nextjs/saas-starter)
-> como base pra interface do Supportability AI Agent. Auth, billing (Stripe)
+> como base pra interface do TicketLens. Auth, billing (Stripe)
 > e dashboard de times/usuários já vêm prontos daqui.
 >
 > **Conectado ao MCP server em Go** via `app/api/tools/[tool]/route.ts`, que
