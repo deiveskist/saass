@@ -1,6 +1,17 @@
-# supportability-mcp
+# TicketLens
 
-Servidor MCP em Go com as 5 tools do MVP v1 do Supportability AI Agent,
+> **Sobre o nome:** o produto se chama **TicketLens** — o repositório e o
+> binário ainda se chamam `supportability-mcp` por enquanto (renomear
+> isso é um passo separado, não feito ainda). "Lens" (lente) descreve bem
+> o que o produto faz: aproxima e junta o contexto ao redor de **um
+> ticket** — comentários, tickets parecidos, deploys recentes, logs — pra
+> dar ao engenheiro de suporte uma visão nítida antes de investigar na
+> mão. O nome anterior vinha de um projeto interno homônimo na SAP
+> Concur (uma interface de viagens, sem relação nenhuma com isto) — o
+> nome mudou justamente pra não ter essa confusão, já que este projeto é
+> inteiramente independente da SAP/Concur.
+
+Servidor MCP em Go com as 5 tools do MVP v1 do TicketLens,
 com integrações reais (Zendesk, GitHub, Datadog) e testes automatizados.
 Falta só validar contra credenciais e tickets reais (ver seção de testes).
 
