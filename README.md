@@ -42,6 +42,7 @@ invocá-lo, como subprocesso, sem precisar expor porta HTTP no v1.
 │   ├── summarize.go            # summarize_investigation (sem API externa)
 │   ├── *_test.go                # testes unitários com HTTP mockado (httptest)
 │   └── integration_test.go     # testes manuais contra APIs reais (build tag `integration`)
+├── web/                 # interface (Next.js) — ver web/README.md
 └── go.mod
 ```
 
