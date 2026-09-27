@@ -1,8 +1,8 @@
 # supportability-mcp
 
-Servidor MCP em Go com as 5 tools do MVP v1 do Supportability AI Agent.
-Compilado e testado com `go build ./...` (Go 1.23) — só falta plugar as
-chamadas reais de API onde tem `TODO`.
+Servidor MCP em Go com as 5 tools do MVP v1 do Supportability AI Agent,
+com integrações reais (Zendesk, GitHub, Datadog) e testes automatizados.
+Falta só validar contra credenciais e tickets reais (ver seção de testes).
 
 ## Rodando localmente
 
@@ -34,11 +34,14 @@ invocá-lo, como subprocesso, sem precisar expor porta HTTP no v1.
 .
 ├── main.go              # registra as 5 tools e sobe o servidor stdio
 ├── tools/
-│   ├── ticket.go             # get_ticket — implementação de referência completa
-│   ├── logs.go                # search_logs (stub — plugar Datadog/Sentry)
-│   ├── related_tickets.go     # search_related_tickets (stub)
-│   ├── deploys.go             # get_recent_deploys (stub — plugar GitHub API)
-│   └── summarize.go           # summarize_investigation (sem API externa)
+│   ├── httpclient.go          # client HTTP compartilhado + base URLs (substituíveis em teste)
+│   ├── ticket.go               # get_ticket — Zendesk (ticket + comentários + resolução de autor)
+│   ├── logs.go                 # search_logs — Datadog Logs Search API v2
+│   ├── related_tickets.go      # search_related_tickets — Zendesk Search API
+│   ├── deploys.go              # get_recent_deploys — GitHub Commits API
+│   ├── summarize.go            # summarize_investigation (sem API externa)
+│   ├── *_test.go                # testes unitários com HTTP mockado (httptest)
+│   └── integration_test.go     # testes manuais contra APIs reais (build tag `integration`)
 └── go.mod
 ```
 
@@ -53,13 +56,30 @@ invocá-lo, como subprocesso, sem precisar expor porta HTTP no v1.
 - ✅ `search_logs` — busca real via Datadog Logs Search API v2
 - ✅ **As 5 tools do MVP v1 estão funcionalmente completas** — nenhum TODO de integração pendente
 
-**Único gap real: nada foi testado contra credenciais de verdade ainda.**
 Os testes em `tools/*_test.go` cobrem toda a lógica de parsing, erro e
 enriquecimento contra servidores HTTP mockados (`go test ./...`, 8 testes,
 sem nenhuma chamada de rede real) — isso valida o código, mas não substitui
-testar contra as APIs reais. Antes de confiar no resultado com dados reais:
+testar contra as APIs reais.
+
+**Testando contra APIs reais quando você tiver as credenciais** — sem
+precisar escrever nenhum script novo:
+
+```bash
+MANUAL_TICKET_ID=12345 \
+ZENDESK_SUBDOMAIN=suaempresa ZENDESK_EMAIL=voce@empresa.com ZENDESK_API_TOKEN=xxx \
+go test -tags=integration ./tools/ -run TestManual_GetTicket -v
+```
+
+Cada tool tem seu próprio `TestManual_*` em `tools/integration_test.go`
+(atrás da build tag `integration`, então nunca roda por acidente no CI ou
+no `go test ./...` normal). Cada um pula sozinho se sua env var não estiver
+setada — dá pra testar uma API de cada vez, sem precisar ter todas as
+credenciais ao mesmo tempo. O comentário no topo do arquivo lista as env
+vars de cada teste.
+
+Antes de confiar no resultado com dados reais:
 1. Gerar as credenciais reais (Zendesk API token, GitHub PAT, Datadog API+APP key)
-2. Rodar o servidor e chamar cada tool manualmente contra 1 ticket conhecido
+2. Rodar `TestManual_*` (acima) contra 1 ticket conhecido de cada vez
 3. Comparar o `summarize_investigation` gerado pelo agente com a conclusão
    que um engenheiro chegou de fato — esse é o gate antes de vender
    (critério: bater em 60-70% dos casos, ver `/areas/supportability-agent-saas.md`)
@@ -68,8 +88,3 @@ testar contra as APIs reais. Antes de confiar no resultado com dados reais:
 vez de Datadog — só `ticket.go`/`related_tickets.go` e `logs.go` precisam
 mudar; `main.go` e os schemas continuam iguais.
 
-## Próximo passo depois de plugar as APIs reais
-
-Rodar contra 15-20 tickets reais e comparar o `summarize_investigation`
-gerado com a conclusão que um engenheiro chegou de fato — esse é o gate
-antes de qualquer decisão de vender (ver `/areas/supportability-agent-saas.md`).
