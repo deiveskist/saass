@@ -38,11 +38,44 @@ out), protegidas por `Authorization: Bearer <INTERNAL_API_KEY>`, mais um
 `GET /healthz`. Os dois transportes (stdio e HTTP) chamam exatamente as
 mesmas funções — nenhuma lógica é duplicada entre eles.
 
+### Rodando tudo localmente, sem nenhuma credencial real
+
+Pra validar o sistema inteiro (Go MCP server + interface web) sem conta
+no Zendesk/GitHub/Datadog nem no Stripe:
+
+```bash
+# Terminal 1 — mock server + servidor Go, os dois já conectados
+./scripts/dev-local.sh
+
+# Terminal 2 — Postgres local + interface web
+docker compose up -d
+cd web
+cp .env.example .env
+npm run db:migrate
+npm run dev
+```
+
+Abra http://localhost:3000, crie uma conta em `/sign-up` (não rode `npm
+run db:seed` — ele chama a API real do Stripe pra criar produtos e vai
+falhar sem chave real) e acesse `/dashboard/investigate`. Digite qualquer
+ticket ID — o `cmd/mockserver` sempre devolve os mesmos dados canned (um
+ticket de SSO/SAML, 2 tickets relacionados, 2 commits, 2 linhas de log),
+suficiente pra ver a UI inteira funcionando ponta a ponta.
+
+`cmd/mockserver` existe só pra desenvolvimento — não é parte do produto.
+As 3 base URLs das tools (`ZENDESK_API_BASE`, `GITHUB_API_BASE`,
+`DATADOG_API_BASE`) podem ser sobrescritas por env var em qualquer
+ambiente, não só em teste — é assim que o `--http` aponta pro mock em vez
+das APIs reais.
+
 ## Estrutura
 
 ```
 .
-├── main.go              # registra as 5 tools e sobe o servidor stdio
+├── main.go              # registra as 5 tools e sobe o servidor stdio (ou --http)
+├── cmd/mockserver/       # mock de Zendesk/GitHub/Datadog — só pra dev local
+├── scripts/dev-local.sh # sobe mockserver + servidor Go juntos, prontos pra uso
+├── docker-compose.yml    # Postgres local pro frontend (web/)
 ├── tools/
 │   ├── httpclient.go          # client HTTP compartilhado + base URLs (substituíveis em teste)
 │   ├── ticket.go               # get_ticket — Zendesk (ticket + comentários + resolução de autor)

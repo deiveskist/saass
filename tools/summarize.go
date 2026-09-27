@@ -47,13 +47,16 @@ func handleSummarizeInvestigation(ctx context.Context, req mcp.CallToolRequest) 
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
+	evidence := req.GetStringSlice("evidence", []string{})
+	nextStep := req.GetString("suggested_next_step", "")
 
 	summary := InvestigationSummary{
-		TicketID:         ticketID,
-		Hypothesis:       hypothesis,
-		Confidence:       confidence,
-		Evidence:         []string{},
-		RelatedTicketIDs: []string{},
+		TicketID:          ticketID,
+		Hypothesis:        hypothesis,
+		Confidence:        confidence,
+		Evidence:          evidence,
+		SuggestedNextStep: nextStep,
+		RelatedTicketIDs:  []string{},
 	}
 
 	payload, err := json.Marshal(summary)
