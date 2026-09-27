@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -91,6 +92,63 @@ type zendeskCommentsResponse struct {
 		Body      string `json:"plain_body"`
 		CreatedAt string `json:"created_at"`
 	} `json:"comments"`
+	// Users vem preenchido graças a ?include=users na URL — a Zendesk
+	// "side-loada" os usuários citados nos comentários numa única resposta,
+	// evitando 1 chamada por autor.
+	Users []struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+	} `json:"users"`
+}
+
+// authorNameCache guarda id -> nome resolvido durante o processo inteiro
+// (não só um ticket). Útil porque, numa mesma investigação, o mesmo
+// support engineer costuma aparecer em vários comentários e tickets
+// relacionados. Protegido por mutex pois o servidor MCP pode atender
+// chamadas concorrentes do agente.
+var (
+	authorNameCache   = map[int64]string{}
+	authorNameCacheMu sync.RWMutex
+)
+
+func cacheAuthorNames(users []struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}) {
+	authorNameCacheMu.Lock()
+	defer authorNameCacheMu.Unlock()
+	for _, u := range users {
+		authorNameCache[u.ID] = u.Name
+	}
+}
+
+// resolveAuthorName tenta o cache primeiro; se o autor não veio side-loaded
+// nesta resposta (ex.: org com o side-loading desabilitado), cai pra uma
+// chamada individual a /users/{id}.json e guarda o resultado pra próxima vez.
+func resolveAuthorName(ctx context.Context, env *zendeskEnv, authorID int64) string {
+	authorNameCacheMu.RLock()
+	name, ok := authorNameCache[authorID]
+	authorNameCacheMu.RUnlock()
+	if ok {
+		return name
+	}
+
+	type zendeskUserResponse struct {
+		User struct {
+			Name string `json:"name"`
+		} `json:"user"`
+	}
+	resp, err := zendeskGet[zendeskUserResponse](ctx, env,
+		fmt.Sprintf("https://%s.zendesk.com/api/v2/users/%d.json", env.Subdomain, authorID))
+	if err != nil {
+		// Não trava a investigação por causa de um nome — cai pro ID cru.
+		return fmt.Sprintf("user:%d", authorID)
+	}
+
+	authorNameCacheMu.Lock()
+	authorNameCache[authorID] = resp.User.Name
+	authorNameCacheMu.Unlock()
+	return resp.User.Name
 }
 
 // zendeskEnv agrupa as credenciais lidas do ambiente. Falha cedo e com
@@ -130,7 +188,7 @@ func fetchTicketFromZendesk(ctx context.Context, ticketID string) (*Ticket, erro
 		return nil, fmt.Errorf("fetching ticket: %w", err)
 	}
 
-	commentsResp, err := zendeskGet[zendeskCommentsResponse](ctx, env, fmt.Sprintf("%s/tickets/%s/comments.json", base, ticketID))
+	commentsResp, err := zendeskGet[zendeskCommentsResponse](ctx, env, fmt.Sprintf("%s/tickets/%s/comments.json?include=users", base, ticketID))
 	if err != nil {
 		// Não falha a investigação inteira por causa dos comentários —
 		// devolve o ticket sem histórico e deixa claro no campo.
@@ -145,11 +203,12 @@ func fetchTicketFromZendesk(ctx context.Context, ticketID string) (*Ticket, erro
 			Comments:    []Comment{},
 		}, nil
 	}
+	cacheAuthorNames(commentsResp.Users)
 
 	comments := make([]Comment, 0, len(commentsResp.Comments))
 	for _, c := range commentsResp.Comments {
 		comments = append(comments, Comment{
-			Author:    fmt.Sprintf("user:%d", c.AuthorID), // TODO: resolver nome via /users/{id}.json com cache
+			Author:    resolveAuthorName(ctx, env, c.AuthorID),
 			Body:      c.Body,
 			CreatedAt: c.CreatedAt,
 		})
