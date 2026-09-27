@@ -1,0 +1,44 @@
+{
+  "id": "04-jwt-clock-skew-ntp-blocked",
+  "title": "401 intermitente 'token used before issued' porque uma mudança de firewall bloqueou NTP e um nó derivou o relógio",
+  "difficulty": "hard",
+  "what_it_tests": "Juntar três pistas fracas: erro só em um host, aviso de NTP nesse host, e um deploy de infra que não parece relacionado a autenticação.",
+  "based_on": [
+    {"type": "forum", "url": "https://community.auth0.com/t/wp-auth0-wordpress-plugin-jwt-token-problems/11019"},
+    {"type": "github-issue", "url": "https://github.com/golang-jwt/jwt/issues/98"}
+  ],
+  "repository": "acme/platform-infra",
+  "ticket": {
+    "id": 5304,
+    "subject": "Intermittent 401 'token used before issued' on roughly 1 in 4 API calls",
+    "description": "Several customers get sporadic HTTP 401 with 'token used before issued'. Retrying usually works. Started yesterday afternoon. API service: acme/api, infrastructure changes go through acme/platform-infra.",
+    "status": "open",
+    "priority": "high",
+    "created_at": "2026-09-18T10:30:00Z",
+    "tags": ["auth", "jwt", "intermittent"],
+    "comments": [
+      {"author": "Marcus (Platform Team)", "body": "The API runs on 4 nodes behind the load balancer.", "created_at": "2026-09-18T10:36:00Z"}
+    ]
+  },
+  "related_tickets": [
+    {"id": 4011, "subject": "Customers getting 401 after their access tokens expired", "status": "solved", "resolution": "Client was not refreshing tokens. Documented the refresh flow."}
+  ],
+  "deploys": [
+    {"sha": "b77e310a4c", "message": "security: restrict egress on api node pool to tcp/443 only", "author": "Lena", "date": "2026-09-17T15:05:00Z", "files": ["network/egress-policy.yaml"], "pr": 322},
+    {"sha": "c4d2e1977f", "message": "chore: bump api node pool base image to 2026.09", "author": "Marcus", "date": "2026-09-16T09:00:00Z", "files": ["nodepools/api.yaml"], "pr": 318}
+  ],
+  "logs": [
+    {"timestamp": "2026-09-18T09:02:11Z", "service": "api", "level": "warn", "message": "ntp: no reply from time server (udp/123) host=api-node-3", "trace_id": ""},
+    {"timestamp": "2026-09-18T09:40:51Z", "service": "api", "level": "error", "message": "jwt validation failed: token used before issued (iat is 121s ahead of local clock) host=api-node-3", "trace_id": "tr-api-9001"},
+    {"timestamp": "2026-09-18T09:41:05Z", "service": "api", "level": "info", "message": "GET /v1/projects 200 host=api-node-1", "trace_id": "tr-api-9002"},
+    {"timestamp": "2026-09-18T10:12:30Z", "service": "api", "level": "error", "message": "jwt validation failed: token used before issued (iat is 124s ahead of local clock) host=api-node-3", "trace_id": "tr-api-9107"}
+  ],
+  "ground_truth": {
+    "root_cause": "Clock drift on api-node-3. The egress restriction deployed in b77e310 blocks NTP (udp/123), so that node's clock fell about 2 minutes behind and it rejects freshly issued JWTs as used before issued. Allow NTP egress, resync the clock, and consider a small iat leeway.",
+    "category": "config-change",
+    "accept_any": [["clock"], ["ntp"], ["time sync"], ["skew"]],
+    "required_evidence": ["api-node-3", "b77e310"],
+    "must_not_blame": ["c4d2e19"],
+    "expected_confidence": ["medium", "high"]
+  }
+}

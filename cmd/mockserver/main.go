@@ -28,12 +28,22 @@ import (
 
 func main() {
 	addr := flag.String("addr", ":9090", "endereço para o mock server escutar")
+	scenarioPath := flag.String("scenario", "", "caminho de um validation/scenarios/*.json; se vazio, usa os dados fixos")
 	flag.Parse()
 
 	mux := http.NewServeMux()
-	registerZendeskMocks(mux)
-	registerGitHubMocks(mux)
-	registerDatadogMocks(mux)
+	if *scenarioPath != "" {
+		s, err := loadScenario(*scenarioPath)
+		if err != nil {
+			log.Fatalf("falha ao carregar cenário: %v", err)
+		}
+		registerScenarioMocks(mux, s)
+		log.Printf("modo cenário: %s (ticket #%d)", s.ID, s.Ticket.ID)
+	} else {
+		registerZendeskMocks(mux)
+		registerGitHubMocks(mux)
+		registerDatadogMocks(mux)
+	}
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))

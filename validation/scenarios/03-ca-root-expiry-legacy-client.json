@@ -1,0 +1,43 @@
+{
+  "id": "03-ca-root-expiry-legacy-client",
+  "title": "Parceiro com servidor legado não consegue mais chamar nossa API depois que a raiz cruzada da CA expirou",
+  "difficulty": "hard",
+  "what_it_tests": "Reconhecer que nenhum deploy nosso causou o problema: é o trust store desatualizado do cliente. Testa não inventar culpado entre os deploys.",
+  "based_on": [
+    {"type": "vendor-docs", "url": "https://letsencrypt.org/docs/dst-root-ca-x3-expiration-september-2021/"},
+    {"type": "vendor-kb", "url": "https://support.cpanel.net/hc/en-us/articles/4409759316759-DST-Root-CA-X3-Expiration-and-Let-s-Encrypt"}
+  ],
+  "repository": "acme/partner-api",
+  "ticket": {
+    "id": 5203,
+    "subject": "Partner integration failing: 'certificate has expired' when calling our API",
+    "description": "Partner Wayne Logistics says their order-sync job can no longer call our partner API. Their error: 'SSL certificate problem: certificate has expired'. Our certificate is valid until next year and browsers show no warning. Their job runs on an old CentOS 6 server. Service: acme/partner-api.",
+    "status": "open",
+    "priority": "high",
+    "created_at": "2026-09-24T09:30:00Z",
+    "tags": ["tls", "partner", "wayne"],
+    "comments": [
+      {"author": "Priya (Support Eng)", "body": "Other partners are calling the API fine. Wayne's last successful call was yesterday before midnight UTC.", "created_at": "2026-09-24T09:41:00Z"}
+    ]
+  },
+  "related_tickets": [
+    {"id": 3310, "subject": "Old Android devices show certificate warnings on our app domain", "status": "solved", "resolution": "Those devices' trust store does not include the new root after the old cross-signed root expired. The client must update its CA bundle. Nothing to fix on our certificate."}
+  ],
+  "deploys": [
+    {"sha": "5e8d0af9b1", "message": "feat: add pagination to /v2/invoices", "author": "Lena", "date": "2026-09-23T14:10:00Z", "files": ["handlers/invoices.go"], "pr": 640}
+  ],
+  "logs": [
+    {"timestamp": "2026-09-24T08:15:02Z", "service": "partner-api-ingress", "level": "warn", "message": "http: TLS handshake error from 203.0.113.44:51514: remote error: tls: bad certificate", "trace_id": ""},
+    {"timestamp": "2026-09-24T08:15:03Z", "service": "partner-api-ingress", "level": "info", "message": "serving chain: leaf -> intermediate R11 -> ISRG Root X1 (legacy cross-sign by old root expired)", "trace_id": ""},
+    {"timestamp": "2026-09-24T08:45:17Z", "service": "partner-api-ingress", "level": "warn", "message": "http: TLS handshake error from 203.0.113.44:51730: remote error: tls: bad certificate", "trace_id": ""},
+    {"timestamp": "2026-09-24T08:46:00Z", "service": "partner-api", "level": "info", "message": "POST /v1/orders 200 partner=acme-retail", "trace_id": "tr-pa-771"}
+  ],
+  "ground_truth": {
+    "root_cause": "The partner's legacy server has an outdated trust store (old ca-certificates bundle) that does not include the current root. Once the old cross-signed root expired, their client rejects our otherwise valid chain during the TLS handshake. None of our deploys caused this. The partner must update their CA bundle.",
+    "category": "external-dependency",
+    "accept_any": [["trust store"], ["ca-certificates"], ["ca bundle"], ["root", "expir"]],
+    "required_evidence": ["tls: bad certificate", "203.0.113.44"],
+    "must_not_blame": ["5e8d0af", "pagination"],
+    "expected_confidence": ["medium", "high"]
+  }
+}

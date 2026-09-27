@@ -1,0 +1,45 @@
+{
+  "id": "05-stripe-webhook-raw-body",
+  "title": "Pedidos pagos presos em 'pending' porque um refactor passou a parsear o body globalmente e quebrou a assinatura do webhook",
+  "difficulty": "medium",
+  "what_it_tests": "Escolher entre duas causas conhecidas do mesmo erro (secret de test vs. live, ou body parseado) usando o timing do deploy.",
+  "based_on": [
+    {"type": "forum", "url": "https://answers.netlify.com/t/stripe-webhook-not-working-after-deploy-on-netlify/90970"},
+    {"type": "forum", "url": "https://forum.djangoproject.com/t/stripe-no-signatures-found-matching-the-expected-signature-for-payload-using-django-rest-framework-and-request-body/42482"},
+    {"type": "blog", "url": "https://dev.to/nerdincode/debugging-stripe-webhook-signature-verification-errors-in-production-1h7c"}
+  ],
+  "repository": "acme/checkout",
+  "ticket": {
+    "id": 5405,
+    "subject": "Paid orders stuck in 'pending payment' since yesterday evening",
+    "description": "Customers are charged in Stripe but their orders stay in 'pending payment' and nothing ships. Started yesterday evening. Service: acme/checkout.",
+    "status": "open",
+    "priority": "urgent",
+    "created_at": "2026-09-19T11:00:00Z",
+    "tags": ["payments", "stripe", "webhook"],
+    "comments": [
+      {"author": "Priya (Support Eng)", "body": "Stripe dashboard shows webhook deliveries to our endpoint failing with HTTP 400 since yesterday around 17:30 UTC.", "created_at": "2026-09-19T11:07:00Z"}
+    ]
+  },
+  "related_tickets": [
+    {"id": 4550, "subject": "Webhook signature errors right after going live", "status": "solved", "resolution": "Production was configured with the test-mode webhook signing secret. Switched to the live secret."}
+  ],
+  "deploys": [
+    {"sha": "8d1e6f2b90", "message": "refactor: register express.json() globally in app.ts instead of per-router", "author": "Marcus", "date": "2026-09-18T17:25:00Z", "files": ["src/app.ts", "src/routes/index.ts"], "pr": 977},
+    {"sha": "2aa91c3e11", "message": "feat: add coupon code field to checkout form", "author": "Lena", "date": "2026-09-18T09:10:00Z", "files": ["src/ui/CheckoutForm.tsx"], "pr": 974}
+  ],
+  "logs": [
+    {"timestamp": "2026-09-19T10:02:41Z", "service": "checkout", "level": "error", "message": "stripe webhook rejected: No signatures found matching the expected signature for payload (POST /webhooks/stripe 400)", "trace_id": "tr-co-3310"},
+    {"timestamp": "2026-09-19T10:02:42Z", "service": "checkout", "level": "info", "message": "order ord_8812 still awaiting payment confirmation", "trace_id": "tr-co-3310"},
+    {"timestamp": "2026-09-19T10:31:09Z", "service": "checkout", "level": "error", "message": "stripe webhook rejected: No signatures found matching the expected signature for payload (POST /webhooks/stripe 400)", "trace_id": "tr-co-3355"},
+    {"timestamp": "2026-09-19T10:31:10Z", "service": "checkout", "level": "info", "message": "webhook signing secret loaded from env STRIPE_WEBHOOK_SECRET (live mode, unchanged since 2026-06-02)", "trace_id": ""}
+  ],
+  "ground_truth": {
+    "root_cause": "Commit 8d1e6f2 registered express.json() globally, so the Stripe webhook route no longer receives the raw body. Signature verification fails with HTTP 400 and orders never get confirmed. Restore express.raw() on the webhook route ahead of the JSON parser. The signing secret did not change.",
+    "category": "code-regression",
+    "accept_any": [["raw body"], ["express.json"], ["body pars"], ["8d1e6f2"]],
+    "required_evidence": ["8d1e6f2", "No signatures found matching"],
+    "must_not_blame": ["2aa91c3", "coupon"],
+    "expected_confidence": ["medium", "high"]
+  }
+}

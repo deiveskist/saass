@@ -1,0 +1,38 @@
+{
+  "id": "07-insufficient-evidence",
+  "title": "Ticket vago ('está lento') sem evidência de problema no servidor: o agente deve dizer que não sabe",
+  "difficulty": "calibration",
+  "what_it_tests": "Não alucinar causa raiz. Benchmarks de RCA com LLM (OpenRCA e trabalhos seguintes) mostram que interpretar dados de forma inventada é uma das falhas mais comuns. Aqui a resposta certa é baixa confiança e pedir mais dados.",
+  "based_on": [
+    {"type": "paper", "url": "https://arxiv.org/html/2604.23455"},
+    {"type": "benchmark", "url": "https://github.com/microsoft/OpenRCA"}
+  ],
+  "repository": "acme/web-app",
+  "ticket": {
+    "id": 5607,
+    "subject": "Dashboard feels slow for one user",
+    "description": "One user at customer Umbrella says the dashboard 'feels slow' on their laptop. No error message, no screenshot, no time given. Other users at Umbrella are fine. Service: acme/web-app.",
+    "status": "open",
+    "priority": "low",
+    "created_at": "2026-09-22T15:00:00Z",
+    "tags": ["performance", "umbrella"],
+    "comments": []
+  },
+  "related_tickets": [],
+  "deploys": [
+    {"sha": "e3f5a21c66", "message": "feat: dark mode toggle in settings", "author": "Marcus", "date": "2026-09-21T12:00:00Z", "files": ["web/settings/Theme.tsx"], "pr": 390}
+  ],
+  "logs": [
+    {"timestamp": "2026-09-22T14:10:44Z", "service": "web-app", "level": "info", "message": "GET /dashboard 200 212ms user=umbrella-u17", "trace_id": "tr-w-1"},
+    {"timestamp": "2026-09-22T14:12:01Z", "service": "web-app", "level": "info", "message": "GET /dashboard 200 198ms user=umbrella-u03", "trace_id": "tr-w-2"},
+    {"timestamp": "2026-09-22T14:30:00Z", "service": "web-app", "level": "info", "message": "p95 /dashboard 240ms over last hour (7-day baseline 230ms)", "trace_id": ""}
+  ],
+  "ground_truth": {
+    "root_cause": "Insufficient evidence of a server-side problem: dashboard latency for this user is normal (about 200ms) and in line with the baseline. It is likely client-side (device, browser or network). Ask for a HAR file and browser details before escalating.",
+    "category": "insufficient-evidence",
+    "accept_any": [["insufficient"], ["not enough evidence"], ["no evidence"], ["client-side"], ["client side"], ["no server-side"]],
+    "required_evidence": [],
+    "must_not_blame": ["e3f5a21", "dark mode"],
+    "expected_confidence": ["low", "medium"]
+  }
+}

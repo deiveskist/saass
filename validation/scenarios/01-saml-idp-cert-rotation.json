@@ -1,0 +1,46 @@
+{
+  "id": "01-saml-idp-cert-rotation",
+  "title": "SSO quebra para um tenant depois que o IdP do cliente renovou o certificado de assinatura",
+  "difficulty": "medium",
+  "what_it_tests": "Culpar uma causa externa (config do IdP do cliente) em vez do deploy nosso mais recente, que é irrelevante.",
+  "based_on": [
+    {"type": "forum", "url": "https://live.paloaltonetworks.com/t5/globalprotect-discussions/saml-login-issue-with-token-signing-certificate/m-p/564648"},
+    {"type": "vendor-kb", "url": "https://support.citrix.com/external/article/CTX696606/saml-authentication-fails-on-netscaler-a.html"},
+    {"type": "vendor-kb", "url": "https://confluence.atlassian.com/kb/received-invalid-saml-response-signature-validation-failed-saml-response-rejected-938041884.html"}
+  ],
+  "repository": "acme/auth-service",
+  "ticket": {
+    "id": 5001,
+    "subject": "Nobody at Globex can log in via SSO since this morning",
+    "description": "Customer Globex reports that since about 08:40 UTC every user gets 'We had trouble logging you in' when signing in through Azure AD SSO. Their break-glass admin with password login still works. Customer says nothing changed on their side. Service: acme/auth-service.",
+    "status": "open",
+    "priority": "urgent",
+    "created_at": "2026-09-14T09:10:00Z",
+    "tags": ["sso", "saml", "globex"],
+    "comments": [
+      {"author": "Priya (Support Eng)", "body": "Confirmed with 3 Globex users, all fail at the same step. Other tenants are logging in normally.", "created_at": "2026-09-14T09:18:00Z"}
+    ]
+  },
+  "related_tickets": [
+    {"id": 4102, "subject": "SSO failing for tenant Initech after their IdP certificate renewal", "status": "solved", "resolution": "Initech's ADFS token-signing certificate had been renewed. Imported the new IdP certificate into their SSO config and logins were restored."},
+    {"id": 4388, "subject": "Dashboard slow right after SSO login", "status": "solved", "resolution": "Slow dashboard query fixed with an index. Unrelated to authentication."}
+  ],
+  "deploys": [
+    {"sha": "a91f2c0e7d", "message": "feat(ui): new login page illustration and copy", "author": "Marcus", "date": "2026-09-13T16:20:00Z", "files": ["web/login.tsx", "web/assets/login.svg"], "pr": 811},
+    {"sha": "3be77d1f02", "message": "chore: bump structured logging library", "author": "Deives", "date": "2026-09-12T11:00:00Z", "files": ["go.mod", "go.sum"], "pr": 806}
+  ],
+  "logs": [
+    {"timestamp": "2026-09-14T08:41:07Z", "service": "auth-service", "level": "error", "message": "SAML assertion rejected tenant=globex: signature validation failed, certificate in response does not match configured IdP certificate (configured thumbprint 7F:3A:91, expires 2026-09-21)", "trace_id": "tr-globex-001"},
+    {"timestamp": "2026-09-14T08:41:08Z", "service": "auth-service", "level": "info", "message": "tenant=globex idp metadata import mode=manual (metadata URL not polled)", "trace_id": "tr-globex-001"},
+    {"timestamp": "2026-09-14T08:52:44Z", "service": "auth-service", "level": "error", "message": "SAML assertion rejected tenant=globex: signature validation failed", "trace_id": "tr-globex-014"},
+    {"timestamp": "2026-09-14T08:53:02Z", "service": "auth-service", "level": "info", "message": "SAML login ok tenant=initech user=u-8812", "trace_id": "tr-initech-220"}
+  ],
+  "ground_truth": {
+    "root_cause": "Globex's identity provider rotated its SAML signing certificate. Our SP config for tenant globex still holds the old IdP certificate, so signature validation fails for every Globex login. Fix by importing the new IdP certificate or enabling metadata polling.",
+    "category": "external-config-change",
+    "accept_any": [["certificate", "rotat"], ["certificate", "renew"], ["signing cert"], ["idp cert"]],
+    "required_evidence": ["signature validation failed", "tenant=globex"],
+    "must_not_blame": ["a91f2c0", "login page illustration"],
+    "expected_confidence": ["medium", "high"]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "id": "06-db-connections-exhausted-during-rollout",
+  "title": "Erros por ~30 min durante um rollout: pods antigos e novos juntos esgotaram as conexões do Postgres",
+  "difficulty": "medium",
+  "what_it_tests": "Explicar um incidente já resolvido (pedido de RCA), correlacionando janela do erro com a janela do rollout.",
+  "based_on": [
+    {"type": "status-page", "url": "https://status.apollographql.com/incidents/1wdxpmrqbldc"},
+    {"type": "guide", "url": "https://www.netdata.cloud/guides/postgres/postgres-too-many-connections/"}
+  ],
+  "repository": "acme/graph-api",
+  "ticket": {
+    "id": 5506,
+    "subject": "Errors for about 30 minutes this afternoon, now fine. Customer wants an RCA",
+    "description": "Customer Stark Industries saw 'internal server error' on most GraphQL requests between roughly 17:10 and 17:40 UTC. It recovered on its own. They are asking for a root cause analysis. Service: acme/graph-api.",
+    "status": "open",
+    "priority": "normal",
+    "created_at": "2026-09-20T17:45:00Z",
+    "tags": ["rca", "graphql", "stark"],
+    "comments": []
+  },
+  "related_tickets": [
+    {"id": 4777, "subject": "Slow GraphQL queries on large projects", "status": "solved", "resolution": "Added a missing index on project_items. Unrelated to connection errors."}
+  ],
+  "deploys": [
+    {"sha": "61c0b3e4d8", "message": "deploy: scale graph-api to 24 replicas with maxSurge 100%", "author": "Lena", "date": "2026-09-20T17:08:00Z", "files": ["k8s/deployment.yaml"], "pr": 455},
+    {"sha": "09b7e55a12", "message": "docs: update README setup section", "author": "Deives", "date": "2026-09-19T12:00:00Z", "files": ["README.md"], "pr": 452}
+  ],
+  "logs": [
+    {"timestamp": "2026-09-20T17:09:30Z", "service": "graph-api", "level": "info", "message": "rollout: 48 pods running (24 old + 24 new) during surge", "trace_id": ""},
+    {"timestamp": "2026-09-20T17:11:02Z", "service": "graph-api", "level": "error", "message": "FATAL: remaining connection slots are reserved for non-replication superuser connections", "trace_id": "tr-g-101"},
+    {"timestamp": "2026-09-20T17:11:03Z", "service": "graph-api", "level": "warn", "message": "db pool: waited 5000ms for a connection, pool size=20 per pod", "trace_id": "tr-g-101"},
+    {"timestamp": "2026-09-20T17:41:12Z", "service": "graph-api", "level": "info", "message": "rollout complete: 24 pods running, db connections 480/500", "trace_id": ""}
+  ],
+  "ground_truth": {
+    "root_cause": "During the rollout from 61c0b3e (24 replicas, maxSurge 100%), old and new pods ran at the same time: 48 pods with 20 connections each exceeded Postgres max_connections, so new connections were refused until the surge finished. Lower maxSurge or the per-pod pool size, or put PgBouncer in front of Postgres.",
+    "category": "capacity",
+    "accept_any": [["max_connections"], ["connection slots"], ["connection pool"], ["connection", "exhaust"], ["maxsurge"]],
+    "required_evidence": ["61c0b3e", "remaining connection slots"],
+    "must_not_blame": ["09b7e55"],
+    "expected_confidence": ["medium", "high"]
+  }
+}
