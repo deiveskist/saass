@@ -23,7 +23,29 @@ DD_APP_KEY=xxx \
 |---|---|
 | `ZENDESK_SUBDOMAIN`, `ZENDESK_EMAIL`, `ZENDESK_API_TOKEN` | `get_ticket`, `search_related_tickets` |
 | `GITHUB_TOKEN` | `get_recent_deploys` |
-| `DD_API_KEY`, `DD_APP_KEY` | `search_logs` |
+| `LOGS_PROVIDER` | `search_logs` — `datadog` (default) ou `elasticsearch` |
+| `DD_API_KEY`, `DD_APP_KEY` | `search_logs`, se `LOGS_PROVIDER=datadog` |
+| `ELASTICSEARCH_URL`, `ELASTICSEARCH_INDEX` (default `logs-*`) | `search_logs`, se `LOGS_PROVIDER=elasticsearch` |
+| `ELASTICSEARCH_API_KEY` **ou** `ELASTICSEARCH_USERNAME`+`ELASTICSEARCH_PASSWORD` | idem — o que estiver configurado ganha |
+
+`search_logs` suporta dois backends, escolhidos por `LOGS_PROVIDER` — cada
+instalação self-hosted configura uma vez conforme a stack que já usa, sem
+precisar trocar código:
+
+```bash
+# Datadog (default)
+DD_API_KEY=xxx DD_APP_KEY=xxx ./supportability-mcp
+
+# Elasticsearch
+LOGS_PROVIDER=elasticsearch \
+ELASTICSEARCH_URL=https://es.suaempresa.com:9200 \
+ELASTICSEARCH_API_KEY=xxx \
+./supportability-mcp
+```
+
+O Elasticsearch é lido no formato ECS (Elastic Common Schema): `@timestamp`,
+`service.name`, `log.level`, `message`, `trace.id` — os campos padrão que
+Filebeat/APM/a maioria das integrações oficiais já produzem.
 
 O servidor fala MCP via **stdio** por padrão — é assim que o agente Python
 vai invocá-lo, como subprocesso. Também há um **modo REST** pro dashboard
@@ -93,6 +115,23 @@ As 3 base URLs das tools (`ZENDESK_API_BASE`, `GITHUB_API_BASE`,
 ambiente, não só em teste — é assim que o `--http` aponta pro mock em vez
 das APIs reais.
 
+**Elasticsearch é diferente dos outros três: dá pra rodar de verdade em
+vez de mockar.** O `docker compose up -d` já sobe um Elasticsearch real
+(porta 9200). Pra testar `search_logs` contra ele:
+
+```bash
+./monitoring/elasticsearch/seed-logs.sh   # popula com 3 logs de exemplo (formato ECS)
+
+LOGS_PROVIDER=elasticsearch \
+ELASTICSEARCH_URL=http://localhost:9200 \
+ELASTICSEARCH_INDEX=logs-supportability-demo \
+... /tmp/supportability-mcp --http :8080
+```
+
+O datasource Elasticsearch já vem provisionado no Grafana (junto com o
+Prometheus) — abra http://localhost:3001, aba Explore, escolha
+"Elasticsearch" e busque em `logs-supportability-demo`.
+
 ## Estrutura
 
 ```
@@ -100,7 +139,11 @@ das APIs reais.
 ├── main.go              # registra as 5 tools e sobe o servidor stdio (ou --http)
 ├── cmd/mockserver/       # mock de Zendesk/GitHub/Datadog — só pra dev local
 ├── scripts/dev-local.sh # sobe mockserver + servidor Go juntos, prontos pra uso
-├── docker-compose.yml    # Postgres local pro frontend (web/)
+├── docker-compose.yml    # Postgres, Elasticsearch, Prometheus e Grafana locais
+├── monitoring/
+│   ├── prometheus.yml            # scrape config
+│   ├── elasticsearch/seed-logs.sh # popula o ES local com logs de exemplo
+│   └── grafana/                   # datasources (Prometheus + Elasticsearch) e dashboard pré-provisionados
 ├── tools/
 │   ├── httpclient.go          # client HTTP compartilhado + base URLs (substituíveis em teste)
 │   ├── ticket.go               # get_ticket — Zendesk (ticket + comentários + resolução de autor)

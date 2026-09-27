@@ -16,6 +16,26 @@ services:
       timeout: 5s
       retries: 5
 
+  # Elasticsearch real (não é mock) — diferente de Zendesk/GitHub/Datadog,
+  # dá pra rodar de verdade localmente. Usado quando LOGS_PROVIDER=elasticsearch
+  # (ver tools/logs.go e monitoring/elasticsearch/seed-logs.sh).
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false" # zero-fricção em dev local — nunca em produção
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   prometheus:
     image: prom/prometheus:latest
     restart: unless-stopped
@@ -42,6 +62,8 @@ services:
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
     depends_on:
       - prometheus
+      - elasticsearch
 
 volumes:
   postgres_data:
+  elasticsearch_data:
