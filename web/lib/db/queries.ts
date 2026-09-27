@@ -1,6 +1,16 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users } from './schema';
+import {
+  activityLogs,
+  teamMembers,
+  teams,
+  users,
+  services,
+  integrationConfigs,
+  clientProfiles,
+  type IntegrationType,
+  type ServiceWithIntegrationConfigs,
+} from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -127,4 +137,81 @@ export async function getTeamForUser() {
   });
 
   return result?.team || null;
+}
+
+// --- Serviços e configuração por integração (por cliente/team) ---
+
+export async function getServicesForTeam(teamId: number) {
+  return db.query.services.findMany({
+    where: eq(services.teamId, teamId),
+    orderBy: (services, { desc }) => [desc(services.createdAt)],
+  });
+}
+
+export async function getServiceWithConfigs(
+  serviceId: number,
+  teamId: number
+): Promise<ServiceWithIntegrationConfigs | null> {
+  // Sempre filtra por teamId também — impede um usuário de um team ver ou
+  // editar o service de outro cliente só adivinhando o ID na URL.
+  const result = await db.query.services.findFirst({
+    where: and(eq(services.id, serviceId), eq(services.teamId, teamId)),
+    with: { integrationConfigs: true },
+  });
+  return result ?? null;
+}
+
+export async function createService(
+  teamId: number,
+  name: string,
+  description?: string
+) {
+  const [service] = await db
+    .insert(services)
+    .values({ teamId, name, description })
+    .returning();
+  return service;
+}
+
+export async function upsertIntegrationConfig(
+  serviceId: number,
+  type: IntegrationType,
+  config: Record<string, unknown>
+) {
+  const [row] = await db
+    .insert(integrationConfigs)
+    .values({ serviceId, type, config })
+    .onConflictDoUpdate({
+      target: [integrationConfigs.serviceId, integrationConfigs.type],
+      set: { config, updatedAt: new Date() },
+    })
+    .returning();
+  return row;
+}
+
+export async function getClientProfile(teamId: number) {
+  const result = await db.query.clientProfiles.findFirst({
+    where: eq(clientProfiles.teamId, teamId),
+  });
+  return result ?? null;
+}
+
+export async function upsertClientProfile(
+  teamId: number,
+  data: {
+    industry?: string;
+    primaryContactName?: string;
+    primaryContactEmail?: string;
+    timezone?: string;
+  }
+) {
+  const [row] = await db
+    .insert(clientProfiles)
+    .values({ teamId, ...data })
+    .onConflictDoUpdate({
+      target: clientProfiles.teamId,
+      set: { ...data, updatedAt: new Date() },
+    })
+    .returning();
+  return row;
 }
