@@ -25,8 +25,18 @@ DD_APP_KEY=xxx \
 | `GITHUB_TOKEN` | `get_recent_deploys` |
 | `DD_API_KEY`, `DD_APP_KEY` | `search_logs` |
 
-O servidor fala MCP via **stdio** — é assim que o agente Python vai
-invocá-lo, como subprocesso, sem precisar expor porta HTTP no v1.
+O servidor fala MCP via **stdio** por padrão — é assim que o agente Python
+vai invocá-lo, como subprocesso. Também há um **modo REST** pro dashboard
+web (`web/`), que não fala o protocolo MCP:
+
+```bash
+INTERNAL_API_KEY=um-segredo-seu ./supportability-mcp --http :8080
+```
+
+Isso expõe as mesmas 5 tools em `POST /api/tools/<nome>` (JSON in, JSON
+out), protegidas por `Authorization: Bearer <INTERNAL_API_KEY>`, mais um
+`GET /healthz`. Os dois transportes (stdio e HTTP) chamam exatamente as
+mesmas funções — nenhuma lógica é duplicada entre eles.
 
 ## Estrutura
 

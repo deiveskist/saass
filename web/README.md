@@ -2,10 +2,18 @@
 
 > **Nota deste projeto:** clonado de [nextjs/saas-starter](https://github.com/nextjs/saas-starter)
 > como base pra interface do Supportability AI Agent. Auth, billing (Stripe)
-> e dashboard de times/usuários já vêm prontos daqui. **Ainda não conectado**
-> ao servidor MCP em Go (`../main.go`) — isso é o próximo passo: decidir se o
-> MCP server ganha um transporte HTTP além do stdio atual, ou se uma API
-> route do Next.js chama o binário Go como subprocesso.
+> e dashboard de times/usuários já vêm prontos daqui.
+>
+> **Conectado ao MCP server em Go** via `app/api/tools/[tool]/route.ts`, que
+> faz proxy autenticado pro backend (`../main.go --http :8080`) mantendo o
+> `INTERNAL_API_KEY` só no servidor Next.js — o browser nunca vê esse
+> segredo. Configure `MCP_HTTP_URL` e `INTERNAL_API_KEY` no `.env` (ver
+> `.env.example`) com os mesmos valores usados pra subir o backend.
+>
+> A página `/dashboard/investigate` já usa isso: busca um ticket
+> (`get_ticket`) e tickets relacionados (`search_related_tickets`) e mostra
+> na tela. `get_recent_deploys`, `search_logs` e `summarize_investigation`
+> ainda não têm UI própria — só a rota de API já existe pra eles.
 
 This is a starter template for building a SaaS application using **Next.js** with support for authentication, Stripe integration for payments, and a dashboard for logged-in users.
 
