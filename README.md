@@ -38,6 +38,21 @@ out), protegidas por `Authorization: Bearer <INTERNAL_API_KEY>`, mais um
 `GET /healthz`. Os dois transportes (stdio e HTTP) chamam exatamente as
 mesmas funções — nenhuma lógica é duplicada entre eles.
 
+### Métricas (Prometheus)
+
+O modo `--http` expõe `GET /metrics` (sem auth — é assim que um Prometheus
+real faz scrape; coloque atrás de firewall/rede privada se for exposto
+publicamente):
+
+- `supportability_mcp_tool_calls_total{tool, status}` — contador, `status`
+  é `ok`, `tool_error` (erro de integração upstream) ou `internal_error`
+- `supportability_mcp_tool_call_duration_seconds{tool}` — histograma de
+  latência por tool
+
+Útil já na fase de validação contra credenciais reais: mostra na hora se
+alguma tool está lenta ou falhando mais que as outras, sem precisar ficar
+lendo log.
+
 ### Rodando tudo localmente, sem nenhuma credencial real
 
 Pra validar o sistema inteiro (Go MCP server + interface web) sem conta

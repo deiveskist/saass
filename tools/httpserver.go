@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // ServeHTTP sobe um servidor REST fino sobre as mesmas 5 tools do MCP —
@@ -28,15 +30,19 @@ func ServeHTTP(addr string) error {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/tools/get_ticket", wrapHandler(apiKey, handleGetTicket))
-	mux.HandleFunc("/api/tools/search_related_tickets", wrapHandler(apiKey, handleSearchRelatedTickets))
-	mux.HandleFunc("/api/tools/get_recent_deploys", wrapHandler(apiKey, handleGetRecentDeploys))
-	mux.HandleFunc("/api/tools/search_logs", wrapHandler(apiKey, handleSearchLogs))
-	mux.HandleFunc("/api/tools/summarize_investigation", wrapHandler(apiKey, handleSummarizeInvestigation))
+	mux.HandleFunc("/api/tools/get_ticket", wrapHandler(apiKey, "get_ticket", handleGetTicket))
+	mux.HandleFunc("/api/tools/search_related_tickets", wrapHandler(apiKey, "search_related_tickets", handleSearchRelatedTickets))
+	mux.HandleFunc("/api/tools/get_recent_deploys", wrapHandler(apiKey, "get_recent_deploys", handleGetRecentDeploys))
+	mux.HandleFunc("/api/tools/search_logs", wrapHandler(apiKey, "search_logs", handleSearchLogs))
+	mux.HandleFunc("/api/tools/summarize_investigation", wrapHandler(apiKey, "summarize_investigation", handleSummarizeInvestigation))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
+	// Sem auth de propósito — é assim que um Prometheus real faz scrape.
+	// Se isso for exposto fora de uma rede confiável, coloque atrás de um
+	// proxy/firewall, não do mesmo Bearer token das tools.
+	mux.Handle("/metrics", promhttp.Handler())
 
 	log.Printf("HTTP server listening on %s", addr)
 	return http.ListenAndServe(addr, corsMiddleware(mux))
@@ -51,8 +57,9 @@ type toolHandler func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 // body JSON como os argumentos da tool, monta um mcp.CallToolRequest
 // (o mesmo tipo que o servidor MCP de verdade constrói) e devolve o
 // conteúdo já como JSON puro — sem o envelope de content blocks do MCP,
-// que só faz sentido pro lado do agente/LLM.
-func wrapHandler(apiKey string, handler toolHandler) http.HandlerFunc {
+// que só faz sentido pro lado do agente/LLM. Também registra métricas
+// Prometheus de contagem e duração por tool (ver metrics.go).
+func wrapHandler(apiKey, toolName string, handler toolHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -69,19 +76,26 @@ func wrapHandler(apiKey string, handler toolHandler) http.HandlerFunc {
 			return
 		}
 
+		start := time.Now()
 		result, err := handler(r.Context(), mcp.CallToolRequest{
 			Params: mcp.CallToolParams{Arguments: args},
 		})
+		duration := time.Since(start).Seconds()
+
 		if err != nil {
 			// Erro Go de verdade (bug, não erro de integração) — os
 			// handlers já tratam erro de API externa via IsError abaixo.
+			recordToolCall(toolName, "internal_error", duration)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		if result.IsError {
+			recordToolCall(toolName, "tool_error", duration)
 			w.WriteHeader(http.StatusBadGateway) // erro de integração upstream (Zendesk/GitHub/Datadog)
+		} else {
+			recordToolCall(toolName, "ok", duration)
 		}
 
 		// O texto de cada tool já é um JSON válido (ou {"error": "..."})
